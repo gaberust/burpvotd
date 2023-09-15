@@ -6,6 +6,11 @@ import java.awt.*;
 
 import burp.api.montoya.MontoyaApi;
 
+/**
+ * Represents the main UI panel for the "Verse of the Day" Burp Suite extension.
+ *
+ * @author Gabe Rust
+ */
 public class VOTDPanel extends JPanel {
 
     private final MontoyaApi api;
@@ -19,6 +24,11 @@ public class VOTDPanel extends JPanel {
     private final JTextField translationTextField = new JTextField();
     private final JEditorPane contentPane = new JEditorPane();
 
+    /**
+     * Constructs the main panel with provided Montoya API.
+     *
+     * @param api The MontoyaApi instance that provides access to various burp functionalities.
+     */
     public VOTDPanel(MontoyaApi api) {
         this.api = api;
         this.votd = new VOTD(api);
@@ -34,31 +44,32 @@ public class VOTDPanel extends JPanel {
             public void insertUpdate(DocumentEvent e) {
                 api.persistence().preferences()
                         .setString(TRANSLATION_KEY, translationTextField.getText().strip().toUpperCase());
-                updateContentLabel();
+                updateContent();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
                 api.persistence().preferences()
                         .setString(TRANSLATION_KEY, translationTextField.getText().strip().toUpperCase());
-                updateContentLabel();
+                updateContent();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
                 api.persistence().preferences()
                         .setString(TRANSLATION_KEY, translationTextField.getText().strip().toUpperCase());
-                updateContentLabel();
+                updateContent();
             }
         });
 
         JButton manualRefreshButton = new JButton("Manual Refresh");
-        manualRefreshButton.addActionListener((e) -> updateContentLabel());
+        manualRefreshButton.addActionListener((e) -> updateContent());
 
-        timer = new Timer(3600000, (e) -> updateContentLabel());
+        // Update Verse of the Day once per hour
+        timer = new Timer(3600000, (e) -> updateContent());
         timer.start();
 
-        updateContentLabel();
+        updateContent();
 
         contentPane.setContentType("text/html");
         contentPane.setMaximumSize(new Dimension(700, Short.MAX_VALUE));
@@ -90,10 +101,13 @@ public class VOTDPanel extends JPanel {
         upperPane.add(manualRefreshButton);
     }
 
-    private void updateContentLabel() {
+    /**
+     * Refreshes the content (Verse of the Day) on a separate thread based on the selected translation.
+     */
+    private void updateContent() {
         SwingWorker<String, Void> worker = new SwingWorker<>() {
             @Override
-            protected String doInBackground() throws Exception {
+            protected String doInBackground() {
                 return votd.getVOTD(translationTextField.getText());
             }
 
@@ -111,6 +125,11 @@ public class VOTDPanel extends JPanel {
         worker.execute();
     }
 
+    /**
+     * Stops the timer used for automatic refreshing.
+     * This is necessary for the extension to be fully unloaded,
+     * as SWING keeps a reference to running timers, preventing garbage collection.
+     */
     public void stopTimer() {
         timer.stop();
     }
